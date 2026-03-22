@@ -1,0 +1,36 @@
+//@version=5
+indicator("Complete 1Y Fibonacci Envelope", overlay=true)
+
+// --- 1. Inputs ---
+int len = input.int(365, "1-Year MA Length")
+color ma_col = color.yellow
+
+// --- 2. Calculate 1-Year MA ---
+float d_close = request.security(syminfo.tickerid, "D", close)
+float yearly_ma = ta.sma(d_close, len)
+
+// --- 3. Upper Fibonacci Extensions (Overbought) ---
+// Using standard multipliers found in your screenshot
+float up_1272 = yearly_ma * 1.272
+float up_1414 = yearly_ma * 1.414
+float up_1618 = yearly_ma * 1.618
+float up_2618 = yearly_ma * 2.618
+
+// --- 4. Lower Fibonacci Discounts (Oversold) ---
+float lo_786 = yearly_ma * 0.786
+float lo_618 = yearly_ma * 0.618
+float lo_500 = yearly_ma * 0.500
+float lo_236 = yearly_ma * 0.236
+
+// --- 5. Plotting the Upper Lines ---
+plot(up_2618, "Ext 2.618", color=color.gray, linewidth=2)
+plot(up_1618, "Ext 1.618", color=color.white, linewidth=1)
+plot(up_1414, "Ext 1.414", color=color.red, linewidth=1)
+plot(up_1272, "Ext 1.272", color=color.orange, linewidth=1)
+
+// --- 6. Plotting the Base & Lower Lines ---
+plot(yearly_ma, "1Y MA", color=ma_col, linewidth=3) // The Center Line
+
+plot(lo_786, "Disc 0.786", color=color.green, linewidth=1)
+plot(lo_618, "Disc 0.618", color=color.teal, linewidth=1)
+plot(lo_236, "Disc 0.236", color=color.blue, linewidth=2)
