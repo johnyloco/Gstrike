@@ -1,0 +1,63 @@
+//@version=5
+indicator("Live Price Fibonacci Grid", overlay=true, max_boxes_count=500)
+
+// --- 1. Global Functions ---
+make_label(y_level, txt, txt_color) =>
+    label.new(bar_index, y_level, txt, style=label.style_label_left, color=color.new(#000000, 100), textcolor=txt_color, size=size.tiny)
+
+// Function to draw Top-to-Bottom Zones
+draw_zone(top, bot) =>
+    float gap = top - bot
+    // 0.236 - 0.382 Zone
+    float z1_t = top - (gap * 0.236)
+    float z1_b = top - (gap * 0.382)
+    // 0.5 - 0.618 Zone
+    float z2_t = top - (gap * 0.5)
+    float z2_b = top - (gap * 0.618)
+
+    box.new(bar_index, z1_t, bar_index + 50, z1_b, bgcolor=color.new(#00ced1, 85), border_color=color.new(#00ced1, 60), extend=extend.right, text="TREND TP", text_size=size.tiny, text_color=color.new(#00ced1, 30))
+    box.new(bar_index, z2_t, bar_index + 50, z2_b, bgcolor=color.new(#00ced1, 85), border_color=color.new(#00ced1, 60), extend=extend.right, text="Golden Zone", text_size=size.tiny, text_color=color.new(#00ced1, 30))
+
+// --- 2. Logic: Use Current Price as Base ---
+float price = close
+
+// Upper Levels (Extensions from Price)
+float up1272 = price * 1.272
+float up1618 = price * 1.618
+float up2618 = price * 2.618
+
+// Lower Levels (Retracements from Price)
+float lo786  = price * 0.786
+float lo618  = price * 0.618
+float lo500  = price * 0.500
+float lo382  = price * 0.382
+float lo236  = price * 0.236
+
+// --- 3. Plotting ---
+plot(price, "Current Price", color=color.yellow, linewidth=3)
+plot(up2618, "2.618", color=#808080)
+plot(up1618, "1.618", color=#ffffff)
+plot(up1272, "1.272", color=#ffa500)
+plot(lo786,  "0.786", color=#00ff00)
+plot(lo618,  "0.618", color=#7cfc00)
+plot(lo236,  "0.236", color=#ff4500)
+
+// --- 4. Drawing Micro-Zones ---
+if barstate.islast
+    var box[] zones = array.new_box()
+    for b in zones
+        box.delete(b)
+    
+    // Draw zones relative to current price
+    draw_zone(up1618, up1272)
+    draw_zone(up1272, price)
+    draw_zone(price, lo786)
+    draw_zone(lo786, lo618)
+    draw_zone(lo618, lo500)
+    draw_zone(lo500, lo382)
+    draw_zone(lo382, lo236)
+
+    // Labels
+    make_label(price, "LIVE PRICE", color.yellow)
+    make_label(up1618, "1.618 Target", #ffffff)
+    make_label(lo786, "0.786 Value", #00ff00)
