@@ -1,0 +1,84 @@
+//@version=5
+indicator("1Y MA - Full Fib Micro-Zones", overlay=true, max_boxes_count=500)
+
+// --- 1. Global Functions ---
+make_label(y_level, txt, txt_color) =>
+    label.new(bar_index, y_level, txt, style=label.style_label_left, color=color.new(#000000, 100), textcolor=txt_color, size=size.tiny)
+
+// Function to draw the "Golden Zone" boxes between two levels
+draw_zone(top, bot) =>
+    float gap = top - bot
+    
+    // 1. Golden Zone (0.5 to 0.618 DOWN from the top)
+    float z1_top = top - (gap * 0.5)
+    float z1_bot = top - (gap * 0.618)
+    
+    // 2. Trend Zone (0.236 to 0.382 DOWN from the top)
+    float z2_top = top - (gap * 0.236)
+    float z2_bot = top - (gap * 0.382)
+
+    // Draw Box 1 (Higher zone is now TREND TP relative to top-down move)
+    box.new(bar_index, z2_top, bar_index + 50, z2_bot, 
+         bgcolor=color.new(#00ced1, 85), border_color=color.new(#00ced1, 50), 
+         extend=extend.right, text="TREND TP", text_size=size.tiny, text_color=color.new(#00ced1, 30))
+         
+    // Draw Box 2 (Lower zone is Golden Zone)
+    box.new(bar_index, z1_top, bar_index + 50, z1_bot, 
+         bgcolor=color.new(#00ced1, 85), border_color=color.new(#00ced1, 50), 
+         extend=extend.right, text="Golden Zone", text_size=size.tiny, text_color=color.new(#00ced1, 30))
+
+// --- 2. Inputs ---
+int len    = input.int(365, "1-Year Length (Days)")
+int offset = input.int(0, "Shift Line (Days)", minval=-500, maxval=500)
+color ma_c = input.color(color.yellow, "1 Golden Color")
+
+// --- 3. Multi-Timeframe Logic ---
+float d_close = request.security(syminfo.tickerid, "D", close[offset < 0 ? 0 : offset])
+float yearly_ma = ta.sma(d_close, len)
+
+// --- 4. Level Calculations ---
+float up2618 = yearly_ma * 2.618
+float up1618 = yearly_ma * 1.618
+float up1272 = yearly_ma * 1.272
+float lo786  = yearly_ma * 0.786
+float lo618  = yearly_ma * 0.618
+float lo500  = yearly_ma * 0.500
+float lo382  = yearly_ma * 0.382
+float lo236  = yearly_ma * 0.236
+
+// --- 5. Plotting Macro Lines ---
+plot(yearly_ma, "1 Golden", color=ma_c, linewidth=3)
+plot(up2618, "2.618", color=#808080)
+plot(up1618, "1.618", color=#ffffff)
+plot(up1272, "1.272", color=#ffa500)
+plot(lo786,  "0.786", color=#00ff00)
+plot(lo618,  "0.618", color=#7cfc00)
+plot(lo500,  "0.500", color=#ffd700)
+plot(lo382,  "0.382", color=#ff8c00)
+plot(lo236,  "0.236", color=#ff4500)
+
+// --- 6. Drawing Micro-Zones & Labels ---
+if barstate.islast
+    // Clear old boxes/labels
+    var box[] zones = array.new_box()
+    for b in zones
+        box.delete(b)
+    
+    // Draw Zones Between Every Level
+    draw_zone(up2618, up1618)
+    draw_zone(up1618, up1272)
+    draw_zone(up1272, yearly_ma)
+    draw_zone(yearly_ma, lo786)
+    draw_zone(lo786, lo618)
+    draw_zone(lo618, lo500)
+    draw_zone(lo500, lo382)
+    draw_zone(lo382, lo236)
+
+    // Labels
+    make_label(yearly_ma, "1 Golden", ma_c)
+    make_label(up2618, "2.618 Moon", #808080)
+    make_label(up1618, "1.618 Target", #ffffff)
+    make_label(up1272, "1.272 Trend", #ffa500)
+    make_label(lo786, "0.786 Value", #00ff00)
+    make_label(lo618, "0.618 Golden", #7cfc00)
+    make_label(lo236, "0.236 Deep", #ff4500)
