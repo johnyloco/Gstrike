@@ -1,0 +1,90 @@
+//@version=5
+indicator("1Y MA - Adaptive Zone Brightness + Transparency Slider", overlay=true, max_boxes_count=500)
+
+// --- 1. Global Functions ---
+make_label(y_level, txt, txt_color) =>
+    string final_txt = txt + " (" + str.tostring(y_level, "#.##") + ")"
+    label.new(bar_index, y_level, final_txt, style=label.style_label_left, color=color.new(#000000, 100), textcolor=txt_color, size=size.tiny)
+
+// Updated draw_zone to use the 's_trans' input for secondary zones
+draw_zone(top, bot, zone_color, is_primary, sec_trans) =>
+    float gap = top - bot
+    float z1_top = top - (gap * 0.5)
+    float z1_bot = top - (gap * 0.618)
+    float z2_top = top - (gap * 0.236)
+    float z2_bot = top - (gap * 0.382)
+
+    // Primary = Fixed at 70 (Bright) | Secondary = User Choice (sec_trans)
+    int trans = is_primary ? 70 : sec_trans
+    int text_trans = is_primary ? 20 : math.min(sec_trans + 5, 100)
+
+    box.new(bar_index, z2_top, bar_index + 50, z2_bot, bgcolor=color.new(zone_color, trans), border_color=color.new(zone_color, trans + 10), extend=extend.right, text="TREND TP", text_size=size.tiny, text_color=color.new(zone_color, text_trans))
+    box.new(bar_index, z1_top, bar_index + 50, z1_bot, bgcolor=color.new(zone_color, trans), border_color=color.new(zone_color, trans + 10), extend=extend.right, text="Golden Zone", text_size=size.tiny, text_color=color.new(zone_color, text_trans))
+
+// --- 2. Inputs ---
+int len    = input.int(350, "1-Year Length (Days)")
+int offset = input.int(0, "Shift Line (Days)", minval=-500, maxval=500)
+color ma_c = input.color(color.yellow, "1 Golden Color")
+color main_c = input.color(#00ced1, "Zone Color")
+
+// THIS IS THE BUTTON/SLIDER CODE:
+int s_trans = input.int(94, "Secondary Zone Transparency", minval=0, maxval=100, step=1)
+
+// --- 3. Multi-Timeframe Detection ---
+int m = timeframe.multiplier
+bool is_1D = timeframe.isdaily
+bool is_intraday_high = timeframe.isintraday and (m >= 240 and m <= 720) 
+bool is_intraday_low  = timeframe.isintraday and (m >= 120 and m <= 180) 
+
+float d_close = request.security(syminfo.tickerid, "D", close[offset < 0 ? 0 : offset])
+float yearly_ma = ta.sma(d_close, len)
+
+// --- 4. Level Calculations ---
+float up2618 = yearly_ma * 2.618
+float up2000 = yearly_ma * 2.000
+float up1618 = yearly_ma * 1.618
+float up1272 = yearly_ma * 1.272
+float lo786  = yearly_ma * 0.786
+float lo618  = yearly_ma * 0.618
+float lo500  = yearly_ma * 0.500
+float lo382  = yearly_ma * 0.382
+float lo236  = yearly_ma * 0.236
+
+// --- 5. Plotting Macro Lines ---
+plot(yearly_ma, "1 Golden", color=ma_c, linewidth=3)
+plot(up2618, "2.618", color=#808080)
+plot(up2000, "2.000", color=#ee1e1e, linewidth=2) 
+plot(up1618, "1.618", color=#ffffff)
+plot(up1272, "1.272", color=#ffa500)
+plot(lo786,  "0.786", color=#00ff00)
+plot(lo618,  "0.618", color=#7cfc00)
+plot(lo500,  "0.500", color=#ffd700)
+plot(lo382,  "0.382", color=#ff8c00)
+plot(lo236,  "0.236", color=#ff4500)
+
+// --- 6. Drawing Logic ---
+if barstate.islast
+    // Adaptive Zones (Switch between Primary and Secondary based on TF)
+    draw_zone(up1272, yearly_ma, main_c, is_intraday_low, s_trans)
+    draw_zone(yearly_ma, lo786, main_c, is_intraday_high or is_intraday_low, s_trans)
+    draw_zone(lo786, lo618, main_c, is_1D or is_intraday_high, s_trans)
+    draw_zone(lo618, lo500, main_c, is_1D, s_trans)
+
+    // Permanent Secondary Zones (Always follow the 's_trans' slider)
+    draw_zone(up2618, up2000, main_c, false, s_trans)
+    draw_zone(up2000, up1618, main_c, false, s_trans)
+    draw_zone(up1618, up1272, main_c, false, s_trans)
+    draw_zone(lo500, lo382, main_c, false, s_trans)
+    draw_zone(lo382, lo236, main_c, false, s_trans)
+
+    // Labels
+    make_label(yearly_ma, "1.000 - Golden MA", ma_c)
+    make_label(up2618,    "2.618 - After Moon", #808080)
+    make_label(up2000,    "2.000 - Moon", #ee1e1e)
+    make_label(up1618,    "1.618 - Target", #ffffff)
+    make_label(up1272,    "1.272 - Trend", #ffa500)
+    make_label(lo786,     "0.786 - Sell1", #00ff00)
+    make_label(lo618,     "0.618 - Gpock2", #7cfc00)
+    make_label(lo500,     "0.500 - GPock1", #ffd700)
+    make_label(lo382,     "0.382 - Support", #ff8c00)
+    make_label(lo236,     "0.236 - OG BUY", #ff4500)
